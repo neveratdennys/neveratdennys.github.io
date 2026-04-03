@@ -19,6 +19,6 @@ I am currently most interested in AI safety, especially questions around model h
 
 ## Recent Writing
 
-- [First notes on extending deception detection to Qwen 3.5]({% post_url 2026-04-deception-detection-qwen %})
+- [First notes on extending deception detection to Qwen 3.5]({% post_url 2026-04-03-deception-detection-qwen %})
 
 More will go here as the repo and experiments mature.
