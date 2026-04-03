@@ -3,6 +3,12 @@ layout: default
 title: "First Notes on Extending Deception Detection to Qwen 3.5"
 ---
 
+<nav>
+  <a href="{{ '/' | relative_url }}">Home</a> |
+  <a href="{{ '/writing/' | relative_url }}">Writing</a> |
+  <a href="https://github.com/neveratdennys">GitHub</a>
+</nav>
+
 I started this project from Apollo Research's work on [Detecting Strategic Deception Using Linear Probes](https://www.apolloresearch.ai/research/detecting-strategic-deception-using-linear-probes/) and the accompanying [paper](https://arxiv.org/abs/2502.03407). The basic idea is simple: train linear probes on model activations and see whether deceptive behavior can be detected from internal representations.
 
 My current fork in [deception-detection](https://github.com/neveratdennys/deception-detection) is an early extension. The main change so far is support for Qwen 3.5-4B, so I can run the pipeline on a smaller local model and iterate faster.
