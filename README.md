@@ -1,2 +1,3 @@
 # neveratdennys.github.io
-personal site
+
+I am using this site as a simple home for project notes and personal updates.
