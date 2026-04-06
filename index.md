@@ -3,28 +3,29 @@ layout: default
 title: Home
 ---
 
-<nav aria-label="Site navigation" style="margin: 0 0 1.5rem 0; padding: 0.7rem 0.9rem; border: 1px solid #d0d0d0; border-radius: 6px; background: #f7f7f7; font-size: 0.95rem; font-weight: 600; line-height: 1.2;">
-  <a href="{{ '/' | relative_url }}">Home</a>
-  <span style="color: #888;"> | </span>
-  <a href="{{ '/writing/' | relative_url }}">Writing</a>
-  <span style="color: #888;"> | </span>
-  <a href="https://github.com/neveratdennys">GitHub</a>
-</nav>
+<section class="panel home-panel">
+  <div class="section-heading section-heading-home">
+    <p class="eyebrow">Research</p>
+    <h2>Current focus</h2>
+    <p>Using probes and evals to study deceptive behavior in language models.</p>
+  </div>
+  <div class="hero-actions">
+    <a class="button-link button-link-primary" href="{{ '/writing/' | relative_url }}">Read writing</a>
+    <a class="button-link" href="https://github.com/neveratdennys">View GitHub</a>
+  </div>
 
-# Denny Zhang
+  <div class="focus-list" aria-label="Current focus items">
+    <article class="focus-item">
+      <h3>Detecting deception in language models</h3>
+      <p>Probe-based analysis of deceptive behavior and internal model signals.</p>
+    </article>
+  </div>
+</section>
 
-
-## About
-
-I am currently most interested in AI safety, especially interpretability around model honesty, deception, evaluation. This site will collect short write-ups as projects get far enough to be worth sharing.
-
-## Current Focus
-
-- AI safety research and engineering
-- Deception detection in language models
-- Practical evals for model behavior
-
-## Recent Writing
-
-- [First notes on extending deception detection to Qwen 3.5]({% post_url 2026-04-03-deception-detection-qwen %})
-
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Writing</p>
+    <h2>Recent writing</h2>
+  </div>
+  {% include post_feed.html posts=site.posts limit=3 %}
+</section>

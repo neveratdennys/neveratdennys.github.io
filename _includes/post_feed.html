@@ -1,0 +1,19 @@
+{% assign posts = include.posts | default: site.posts | where_exp: "post", "post.published != false" %}
+{% assign max_posts = include.limit | default: posts.size %}
+
+<div class="post-feed">
+  {% for post in posts limit: max_posts %}
+    <article class="post-card">
+      <div class="post-card-meta">
+        <time datetime="{{ post.date | date_to_xmlschema }}">{{ post.date | date: "%b %-d, %Y" }}</time>
+        {% if post.topics and post.topics != empty %}
+          <span>{{ post.topics | join: " / " }}</span>
+        {% endif %}
+      </div>
+      <h3><a href="{{ post.url | relative_url }}">{{ post.title }}</a></h3>
+      <p>
+        {{ post.summary | default: post.excerpt | strip_html | strip_newlines | truncate: 190 }}
+      </p>
+    </article>
+  {% endfor %}
+</div>

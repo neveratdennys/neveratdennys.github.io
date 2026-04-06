@@ -1,0 +1,15 @@
+<header class="site-header">
+  <a class="brand" href="{{ '/' | relative_url }}">
+    <span class="brand-mark"></span>
+    <span class="brand-text">
+      <strong>{{ site.title }}</strong>
+      <span>{{ site.description }}</span>
+    </span>
+  </a>
+
+  <nav class="site-nav" aria-label="Primary">
+    <a {% if page.url == '/' %}class="is-active"{% endif %} href="{{ '/' | relative_url }}">Home</a>
+    <a {% if page.url == '/writing/' or page.url contains '/writing/' %}class="is-active"{% endif %} href="{{ '/writing/' | relative_url }}">Writing</a>
+    <a href="https://github.com/neveratdennys">GitHub</a>
+  </nav>
+</header>
