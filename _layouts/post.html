@@ -19,7 +19,15 @@ layout: default
     {% endif %}
   </header>
 
-  <div class="post-body">
-    {{ content }}
+  <div class="post-body-wrap">
+    <div class="post-body">
+      {{ content }}
+    </div>
+    <aside class="post-toc" aria-label="Table of contents">
+      <p class="post-toc-label">On this page</p>
+      <nav class="post-toc-nav"></nav>
+    </aside>
   </div>
 </article>
+
+<script src="{{ '/assets/js/post-toc.js' | relative_url }}" defer></script>

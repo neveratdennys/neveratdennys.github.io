@@ -5,7 +5,6 @@ title: Home
 
 <section class="panel home-panel">
   <div class="section-heading section-heading-home">
-    <p class="eyebrow">Research</p>
     <h2>Current focus</h2>
     <p>Using probes and evals to study deceptive behavior in language models.</p>
   </div>
@@ -24,7 +23,6 @@ title: Home
 
 <section class="panel">
   <div class="section-heading">
-    <p class="eyebrow">Writing</p>
     <h2>Recent writing</h2>
   </div>
   {% include post_feed.html posts=site.posts limit=3 %}
