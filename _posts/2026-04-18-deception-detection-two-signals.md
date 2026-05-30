@@ -1,14 +1,18 @@
 ---
 title: "Two Kinds of Deception, Two Kinds of Signal"
 published: true
-summary: "Replicating Apollo Research's linear-probe pipeline on Qwen 3.5-4B. The original paper already flagged insider trading as layer-sensitive; on Qwen the cross-domain transfer collapses below chance, pointing toward a multi-probe approach that treats commission and omission as mechanistically distinct categories."
+summary: "Extending Apollo Research's linear probe pipeline to Qwen 3.5-4B. The cross-domain transfer to insider trading collapses below chance, an extreme version of the scenario sensitivity the paper already flagged. A dedicated omission probe shows a different layer profile from commission, pointing toward treating the two as mechanistically distinct deception categories."
 topics:
   - Interpretability
   - Omission probe
   - Qwen 3.5
 ---
 
-My [recent progress]({{ '/writing/deception-detection-qwen/' | relative_url }}) left the Qwen 3.5-4B probe separating honest and deceptive roleplaying completions at AUROC 0.976, but only 0.642 against an Alpaca control. This shows the ability to detect roleplaying style, but not necessarily deception. I decided to look at the following two points:
+My [recent progress]({{ '/writing/deception-detection-qwen/' | relative_url }}) left the Qwen 3.5-4B probe separating honest and deceptive roleplaying completions at AUROC 0.976, but only 0.642 against an Alpaca control. This shows the ability to detect roleplaying style, but not necessarily deception.
+
+Two setup changes between that post and this one are worth pointing out. First, the control. The Apollo paper probes Llama-3.3 and uses Llama-3.3's own Alpaca completions as the control (paper section 3.2.3). My first Qwen run reused the paper's shipped Llama generated Alpaca completions instead of Qwen generated completions, which made the control writing style confound of Llama style against Qwen style. Regenerating the Alpaca completions with Qwen restored on policy control, matching the paper's design on a different model. Second, I switched the probe's training data from roleplaying scenarios to the paper's RepE (Representation Engineering) paired honest/deceptive facts, which the paper shows separates deception from control more cleanly. Together those two changes lifted vs Alpaca AUROC on roleplaying from 0.642 to 0.971, and the layer optimization below takes it to 0.992.
+
+I decided to look at the following two points:
 
 (1) Find out which layers carry deception signals in Qwen 3.5-4B. The original study sweeps layers and ends up using layer 22 of 80 on Llama-70B, but since Qwen 3.5's architecture is significantly different, I wanted the full per-layer picture on this model before picking the probe depth.
 
@@ -19,6 +23,17 @@ The layer investigation produced a clean peak band at layers 10–15. Cross-doma
 ## Where the signal lives
 
 The Apollo paper applies its probe after layer 22 (of 80) in Llama-70B, picked from a sweep on Roleplaying data and reported in their Appendix D.2. They also note that layer choice matters less on most evaluation sets but drops off sharply past layer 29 on Insider Trading Confirmation, which may have its own layer dynamics. My earlier Qwen 3.5 configs used even layers across the middle half without a full layer test, so I swept all 32 Qwen layers individually, training a single-layer logistic regression probe at each depth.
+
+```bash
+# 32 layer commission sweep on RepE trained probe.
+# experiment.py trains the combined LR probe on all 32 layers; by_layer.py
+# fits a separate single layer probe at each depth and scores against eval.
+.venv/Scripts/python.exe -m deception_detection.scripts.experiment run \
+    --config_file repe_qwen_full_layers.yaml
+
+EXP_DIR=$(ls -td results/repe_qwen_full_layers_lr__*/ | head -1)
+.venv/Scripts/python.exe -m deception_detection.scripts.by_layer run "$EXP_DIR"
+```
 
 ![Commission probe per-layer AUROC sweep in Qwen 3.5-4B](/assets/images/qwen-commission-layer-sweep.png)
 
@@ -32,7 +47,13 @@ An additional note: stacking more layers does not help. I trained three probe va
 
 ![Probe variant comparison on cross-domain roleplaying](/assets/images/qwen-probe-variant-comparison.png)
 
-The 5 layer probe wins on every metric: H vs D AUROC 0.779, vs Alpaca AUROC 0.992, and recall at 1% FPR of 78.8%, compared to 0.713 / 0.984 / 55.4% for the 32 layer and 0.730 / 0.971 / 32.1% for the 7 layer. (On the in domain RepE validation set all three saturate at 1.000.) This reaffirms the idea that uninformative layers dilute the deception direction rather than adding redundancy.
+The 5 layer probe wins on every metric: H vs D AUROC 0.791, vs Alpaca AUROC 0.993, and recall at 1% FPR of 83.2%, compared to 0.725 / 0.978 / 54.0% for the 32 layer and 0.743 / 0.981 / 50.7% for the 7 layer. (On the in domain RepE validation set all three saturate at 1.000.) This reaffirms the idea that uninformative layers dilute the deception direction rather than adding redundancy.
+
+```bash
+# The 5 layer optimized commission probe (layers 10, 11, 13, 14, 15)
+.venv/Scripts/python.exe -m deception_detection.scripts.experiment run \
+    --config_file repe_qwen_optimized.yaml
+```
 
 ## The insider trading result
 
@@ -40,7 +61,7 @@ Then I ran that same probe on insider trading rollouts. This is the scenario whe
 
 It came out at **AUROC 0.458**.
 
-That is below chance, and a significant departure from what the paper reported on the same scenario. The Apollo probe (trained on their equivalent paired honest/deceptive data) reaches AUROC 0.999 on Insider Trading Report on Llama-70B, with a cross-domain AUROC range of 0.96–0.999 across their four evaluation datasets.
+That is below chance, and a significant departure from what the paper reported on the same scenario. The Apollo probe (trained on their equivalent paired honest/deceptive data) reaches AUROC 0.999 on Insider Trading Report on Llama-70B, with a cross-domain AUROC range of 0.964–0.999 across their four evaluation datasets.
 
 ![Cross-domain transfer comparison: paper's Llama-70B probe vs my Qwen 3.5-4B probe](/assets/images/qwen-insider-trading-comparison.png)
 
@@ -65,18 +86,40 @@ The profiles look qualitatively different.
 ![Per-layer AUROC for the commission and omission probes in Qwen 3.5-4B](/assets/images/qwen-commission-vs-omission-layers.png)
 
 - **Commission (blue):** both metrics climb fast and saturate in the 10–15 band. Within domain AUROC reaches 1.00 by layer 11 and holds. vs Alpaca crosses 0.95 at layer 10 and peaks at 1.00 through layers 13–16.
-- **Omission (red):** within domain AUROC sits in a narrow 0.79–0.83 band across layers 0–19, with no climb, no peak, no depth dependence through that range. The vs Alpaca curve is erratic (0.17–0.72) and lifts only in the late layers that were swept.
+- **Omission (red):** within domain AUROC sits flat in the 0.72–0.83 band across all 32 layers, with no climb, no peak, no depth dependence at any depth. The vs Alpaca curve is noisy (0.15–0.59 in the canonical re-derivation, varying without a clean peak).
 
-If these were the same mechanism sharing a direction, they should peak at the same depth with the same shape, and they don't. Commission rises and saturates both within domain H vs D and vs Alpaca together in the 10–15 band. Omission's within domain H vs D sits stable at around 0.82 across layers 0–19 without any clear rise. Then at layers 20–23 it does something commission never does: vs Alpaca separation jumps up to 0.64–0.72 while within domain H vs D drops to 0.72–0.74. The late layer representation is picking up more scenario level signal at the cost of finer honest vs deceptive discrimination, the same scenario sensitivity pattern the paper flagged for the Instructed-Pairs probe, surfacing in a different form here. That's the decision gate I needed before putting effort into a multi probe system: commission and omission are behaving as distinct signals, not variants of one.
+If these were the same mechanism sharing a direction, they should peak at the same depth with the same shape, and they don't. Commission rises and saturates both within domain H vs D and vs Alpaca together in the 10–15 band. Omission's within domain H vs D sits stable across the entire stack without any clear rise. The two probes have qualitatively different depth profiles, which is the decision gate I needed before putting effort into a multi probe system: commission and omission are behaving as distinct signals, not variants of one.
 
 ## Compute notes
 
-The analysis above stops at layer 23 for a practical reason. Running the omission sweep on my local hardware was more work than the RepE sweep. Insider trading has about 6× the samples and 10× the sequence length of the RepE data, which puts activation memory roughly 60× higher. A single 32 layer run OOM'd immediately, so the omission sweep is sharded into 4 layer chunks. Follow up fixes, including sharding runs to handle fewer layers got past an immediate OOM.
+When this post first went up the analysis stopped at layer 23. Running the omission sweep on my local hardware was more work than the RepE sweep. Insider trading has about 6× the samples and 10× the sequence length of the RepE data, which puts activation memory roughly 60× higher. A single 32 layer run OOM'd immediately, so the omission sweep is sharded into 4 layer chunks. Along with some other memory fixes in the pipeline, this got past the initial OOM.
 
-Still, the machine blackscreened multiple times mid sweep on shards 24–27 and 28–31, so those layers are a gap in the omission profile. Something at the driver or power layer is unhappy before I hit OOM, and I haven't figured out a clear solution yet.
+```bash
+# 8 shard omission sweep, 4 layers per shard. Each shard trains its own
+# combined LR + per layer probes on insider_trading__upscale, then merge_layer_shards.py
+# combines the per layer scores into a single 32 layer file.
+for SHARD in 00_03 04_07 08_11 12_15 16_19 20_23 24_27 28_31; do
+    .venv/Scripts/python.exe -m deception_detection.scripts.experiment run \
+        --config_file omission_qwen_layers_${SHARD}.yaml
+    EXP_DIR=$(ls -td results/omission_qwen_layers_${SHARD}_lr__*/ | head -1)
+    .venv/Scripts/python.exe -m deception_detection.scripts.by_layer run "$EXP_DIR"
+done
 
-What the missing layers would tell us: the trade off I noted at layers 20–23, where vs Alpaca separation jumps up while within domain discrimination drops, could either continue deeper into the stack or reverse. That would sharpen the interpretation of what the omission probe is actually learning at late depths. I'm publishing these notes with the layer 0–23 picture for now and plan to close out the layer 24–31 shards in the next post, once the system stability issue is resolved.
+# Merge the 8 shards into a single scores_by_layer.json
+.venv/Scripts/python.exe -m deception_detection.scripts.merge_layer_shards \
+    results/omission_qwen_layers_00_03_lr__*/  \
+    results/omission_qwen_layers_04_07_lr__*/  \
+    results/omission_qwen_layers_08_11_lr__*/  \
+    results/omission_qwen_layers_12_15_lr__*/  \
+    results/omission_qwen_layers_16_19_lr__*/  \
+    results/omission_qwen_layers_20_23_lr__*/  \
+    results/omission_qwen_layers_24_27_lr__*/  \
+    results/omission_qwen_layers_28_31_lr__*/  \
+    --output results/05_omission_32layer_sweep/scores_by_layer.json
+```
+
+Still, the machine blackscreened multiple times mid sweep on shards 24–27 and 28–31, so those layers were a gap in the omission profile when this post first went up. Something at the driver or power layer is unhappy before I hit OOM. (The full 0–31 picture eventually closed in a follow up post.)
 
 ## Next
 
-The immediate next step is closing the layer 24–31 gap once the compute issue is resolved, to see whether the late layer trade off in the omission probe continues or stabilizes. After that, I plan to generate sandbagging rollouts, train a capability suppression probe, and build a cross probe confusion matrix where every probe is evaluated against every deception type plus control. That's the experiment that would actually show whether category specific probes give better coverage than any single probe.
+The layer 24–31 gap eventually closed, and the late layer story turned out simpler than expected (covered in the [batch size post]({{ '/writing/deception-detection-batch-size-kernel-dispatch/' | relative_url }})). Beyond that, the next step is a multi probe POC: pick layers for each probe in a principled way, retrain commission and omission as final probes, and build a cross probe comparison where each probe is evaluated against its own training domain plus held out cross-domain data. The canonical numbers from the batch size post are what that POC uses. The POC is in progress and will be a separate post.
