@@ -115,11 +115,28 @@ pre {
 }
 
 .brand-mark {
-  width: 0.85rem;
-  height: 0.85rem;
+  position: relative;
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+.brand-mark::before,
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #5d88ff);
-  box-shadow: 0 0 24px rgba(142, 197, 255, 0.5);
+}
+
+.brand-mark::before {
+  border: 1.5px solid rgba(159, 176, 198, 0.72);
+}
+
+.brand-mark::after {
+  inset: 0.225rem;
+  background: linear-gradient(135deg, var(--accent-strong), #5d88ff);
+  box-shadow: 0 0 20px rgba(142, 197, 255, 0.5);
 }
 
 .brand-text {

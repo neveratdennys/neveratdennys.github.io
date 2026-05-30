@@ -1,6 +1,7 @@
 ---
 title: "First Notes on Extending Deception Detection to Qwen 3.5"
-summary: "Initial results from extending a deception-detection pipeline to Qwen 3.5-4B, including rollout quality, grading noise, and early probe performance."
+published: true
+summary: "Initial results from extending a deception detection pipeline to Qwen 3.5-4B. First rollout on roleplaying, its grade distribution, and early probe AUROCs."
 topics:
   - Interpretability
   - Qwen 3.5
@@ -17,9 +18,22 @@ My current fork in [deception-detection](https://github.com/neveratdennys/decept
 - Microsoft Foundry support for the grading step
 - a first Qwen roleplaying rollout file and experiment config
 
-The first saved Qwen roleplaying rollout already gives me a usable starting point: 371 deceptive roleplaying prompts with 5 completions each. Though the grades are not perfectly clean, there is also obvious room to improve dataset design, controls, and evaluation.
+The first saved Qwen roleplaying rollout already gives me a usable starting point: 371 deceptive roleplaying prompts with 5 completions each. There is room to improve dataset design, controls, and evaluation, but the graded completions are already usable for a first probe.
 
 ## First probe results
+
+The pipeline is two stages: generate rollouts on the roleplaying scenarios with Qwen as the policy model and Azure OpenAI as the grader, then train a linear probe on the resulting honest vs deceptive activations.
+
+```bash
+# 1. Generate Qwen 3.5-4B roleplaying completions, grade with Azure OpenAI.
+.venv/Scripts/python.exe -m deception_detection.scripts.generate_rollouts \
+    roleplaying__plain --model_name qwen-4b --use_api False \
+    --grading_api azure_openai --num 5
+
+# 2. Train + evaluate the linear probe.
+.venv/Scripts/python.exe -m deception_detection.scripts.experiment run \
+    --config_file qwen_roleplaying.yaml
+```
 
 My first test results are:
 
@@ -30,11 +44,11 @@ My first test results are:
 
 The ROC plot makes the current shape of the result easy to see: strong separation on the held-out honest-vs-deceptive split, and much weaker separation against Alpaca as a control.
 
-## Grading noise
+## Grade distribution
 
 ![Grading histogram for the Qwen 3.5 roleplaying rollout](/assets/images/qwen-roleplaying-grading-histogram.png)
 
-The grading histogram helps explain why this is still early-stage. In the saved roleplaying rollout, most completions are graded as deceptive, but a meaningful minority are still graded as honest or ambiguous. The evaluation setup still has plenty of noise and room for improvement.
+The histogram shows the 1–7 honesty grades from GPT-5.4-mini across all 1,855 completions in the rollout. Every prompt was designed to elicit deception, but the distribution is bimodal with clean peaks at both ends: about 59% of completions land at 6 or 7 (Mostly or Entirely Dishonest), about 20% at 1 or 2 (Honest), and about 21% at 3–5 (Ambiguous or mixed). The peaks at both ends suggest the grader is making confident decisions rather than producing noisy labels. The spread is Qwen's own compliance pattern, even when prompted to be deceptive, the model chooses honesty or hedges roughly 40% of the time. That's useful for probe training, because the honest and deceptive labels come from actual model behavior rather than just the prompt.
 
 ## Next
 

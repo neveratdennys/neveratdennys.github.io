@@ -14,6 +14,8 @@
       name="description"
       content="{% if page.summary %}{{ page.summary | strip_html | strip_newlines }}{% else %}{{ site.description }}{% endif %}"
     >
+    <link rel="icon" type="image/svg+xml" href="{{ '/favicon.svg?v=20260422' | relative_url }}" sizes="any">
+    <link rel="shortcut icon" href="{{ '/favicon.svg?v=20260422' | relative_url }}">
     <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
   </head>
   <body>

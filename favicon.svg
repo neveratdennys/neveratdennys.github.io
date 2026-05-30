@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="probe-dot" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#cde3ff"/>
+      <stop offset="58%" stop-color="#8ec5ff"/>
+      <stop offset="100%" stop-color="#5d88ff"/>
+    </radialGradient>
+    <filter id="probe-glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="32" cy="32" r="18" fill="none" stroke="#9fb0c6" stroke-opacity="0.72" stroke-width="4.5"/>
+  <circle cx="32" cy="32" r="8.5" fill="url(#probe-dot)" filter="url(#probe-glow)"/>
+</svg>
