@@ -1,7 +1,7 @@
 ---
 title: "Computation Tuning: Batch Size Learnings"
 published: true
-summary: "The omission probe's headline standalone-detection result turned out to depend on a hardware-mitigation parameter rather than the probe itself. Tracing it from a stale numerical comparison to a kernel dispatch staircase, then characterising the stable regime."
+summary: "The omission probe's headline detection result was affected by a batch size parameter. This post focuses on tracing the cause of this variance and rerunning under stable batch sizes."
 topics:
   - Interpretability
   - Methodology
@@ -64,7 +64,7 @@ print('Removed:', sorted(old.keys() - new.keys()))
 
 Zero version changes. Same `transformers`, `torch`, `numpy`, `scikit-learn`, `triton-windows`, all the way down. No package was downgraded or upgraded between the two snapshots.
 
-That left code level differences. The infrastructure work I did in mid April to make the deeper omission shards run on a 16 GB card included a small dataset aware batch size table inside the activation extraction code. Before mid April, insider trading ran at training batch size 2. After the TDR mitigation, it ran at batch size 1, to keep per kernel time under the Windows watchdog limit. pre fla shard 16_19 had been produced with `batch_size = 2`. The post fla rerun used `batch_size = 1`.
+That left code level differences. The infrastructure work I did in mid April to make the deeper omission shards run on a 16 GB card included a small dataset aware batch size table inside the activation extraction code. Before mid April, insider trading ran at training batch size 2. After using fla, it ran at batch size 1, to keep per kernel time under the Windows watchdog limit. pre fla shard 16_19 had been produced with `batch_size = 2`. The post fla rerun used `batch_size = 1`.
 
 This is the only python-level code change I could identify between the two snapshots. So this seemed like the likely culprit.
 
@@ -101,13 +101,13 @@ DECEPTION_TRAIN_BATCH_SIZE=2 DECEPTION_EVAL_BATCH_SIZE=4 \
 | Insider Trading H/D | 0.8272 | 0.7427 | 0.7498 | 0.8244 |
 | Insider Trading vs Alpaca | 0.4879 | 0.9039 | 0.9063 | 0.4149 |
 
-Mean absolute delta of the rerun versus pre fla was 0.05. Mean absolute delta versus post fla was 0.19. The rerun in current environment with the old batch size reproduced the old numbers within tolerance, including the IT vs Alpaca chance level reading. batch size was the dominant factor.
+Mean absolute delta of the rerun versus pre fla was 0.05. Mean absolute delta versus post fla was 0.19. The rerun in current environment with the old batch size reproduced the old numbers within tolerance, including the IT vs Alpaca chance level reading. Batch size was the dominant factor.
 
 The Insider Trading vs Alpaca cell is the one that flipped most cleanly. pre fla 0.49, batch=2 in current env 0.41, both close to chance. post fla 0.90, fla off 0.91, both close to deployable. The same probe with the same weights scoring the same prompts, in the same model checkpoint, gives qualitatively different "is this deceptive vs is this normal" readings depending on what batch size the activation extraction was run at.
 
 ## Sweep across batch sizes
 
-I wanted to see if this affect from batch size extends to larger sizes, so I tested batch sizes 1, 2, 4, and 8 next.
+I wanted to see if this effect from batch size extends to larger sizes, so I tested batch sizes 1, 2, 4, and 8 next.
 
 ```bash
 # Sweep across batch sizes on shard 16_19 (one config per batch size)
@@ -132,7 +132,7 @@ The batch=2, batch=4, batch=8 columns are tightly clustered. Pairwise mean absol
 
 The Insider Trading vs Alpaca row is the most striking. It decreases monotonically as batch size increases, going from 0.90 at batch size 1 to 0.20 at batch size 8. By batch=8 the probe scores Alpaca normal text *higher* than insider trading deceptive completions on average. Whatever signal the omission probe was using to look like a standalone detector at batch=1, it disappears smoothly as batch size moves into the standard tensor core dispatch regime, and inverts past chance.
 
- Most characterizations show small variance that wash out across many tokens. A staircase that monotonically inverts a metric across four batch sizes is a different shape. The guess thrown in by Claude is: at batch=1 the GDN kernel routes through a special-case path (probably SIMT cores with FP32 accumulation), at batch≥2 it routes through tensor-core paths with lower-precision accumulation, and the probe direction learned at b=1 picks up something about that special-case path that doesn't generalize to the standard regime. While this is an interesting problem to dive into, I will resume going towards my intended goal for now.
+ Most characterizations show small variance that washes out across many tokens. A staircase that monotonically inverts a metric across four batch sizes is a different shape. The guess thrown in by Claude is: at batch=1 the GDN kernel routes through a special-case path (probably SIMT cores with FP32 accumulation), at batch≥2 it routes through tensor-core paths with lower-precision accumulation, and the probe direction learned at b=1 picks up something about that special-case path that doesn't generalize to the standard regime. While this is an interesting problem to dive into, I will resume going towards my intended goal for now.
 
 ## What this means for the project
 
@@ -140,15 +140,15 @@ The Insider Trading vs Alpaca row is the most striking. It decreases monotonical
 
 **The "deployable standalone detector" doesn't hold.** I had reported earlier that the omission probe gave Insider Trading vs Alpaca AUROC around 0.90, characterizing it as a strong standalone detector that could flag insider trading deceptive completions against normal text. Under the standard batch size regime, that is no longer supported. The probe ranks deceptive completions correctly *within* the insider-trading domain (so H/D AUROC stays at 0.82), but it does not separate the deceptive-completion distribution from the normal-text distribution. 
 
-**The pre bath size change numbers are usable.** They were produced at b=2, sit in the stable cluster, and approximate what a clean b=4 canonical would give within a few hundredths of AUROC across metrics. The post fla numbers are the ones using b=1 and need re-derivation.
+**The pre batch size change numbers are usable.** They were produced at b=2, sit in the stable cluster, and approximate what a clean b=4 canonical would give within a few hundredths of AUROC across metrics. The post fla numbers are the ones using b=1 and need re-derivation.
 
-**Going forward, batch=4 is the right pick.** Matches the dispatch regime that probing papers in this size range typically run in, and fits on a 16 GB card across the deepest shards of the omission sweep without spilling into shared GPU memory, which batch=8 does on laster shards. 
+**Going forward, batch=4 is the right pick.** Matches the dispatch regime that probing papers in this size range typically run in, and fits on a 16 GB card across the deepest shards of the omission sweep without spilling into shared GPU memory, which batch=8 does on later shards. 
 
-## What published work use for batch size
+## What published work uses for batch size
 
 Apollo's deception probe configs use batch sizes in the 4-16 range on H100 class hardware. RepE on LLaMA-2 typically runs batch=8 to 16. Nordby et al.'s ensembling paper across 12 models doesn't report a sensitivity check. The implicit assumption seems to be that any reasonable batch size produces equivalent activations within tolerance.
 
-The 36-40% relative activation drift I measured between batch=1 and batch=2 is well outside that tolerance. It is likely that a b=1 value is much smaller than typical usage, as researchers typically has access to hardware with less retrictive memory limits, so even if this issue may be replicated in other experiments they are almost never encountered.
+The 36-40% relative activation drift I measured between batch=1 and batch=2 is well outside that tolerance. It is likely that a b=1 value is much smaller than typical usage, as researchers typically have access to hardware with less restrictive memory limits, so even if this issue may be replicated in other experiments it is almost never encountered.
 
 
 ## The re-derivation
@@ -204,7 +204,7 @@ A physical GPU reseat fixed it. Same shard config, same batch size, same code, s
 
 The initial "deployable standalone detector against normal text" reading is retracted. The H/D recovery story stays at +0.36 AUROC, with all batch sizes in the stable cluster giving values between +0.30 and +0.37. The relative ranking core claim is robust. 
 
-The anomolous artifacts in the project tree are now tagged. Downstream scoring scripts require the b=4 file and warn on any fallback, so future runs won't accidentally use the older numbers.
+The anomalous artifacts in the project tree are now tagged. Downstream scoring scripts require the b=4 file and warn on any fallback, so future runs won't accidentally use the older numbers.
 
 ## Next
 

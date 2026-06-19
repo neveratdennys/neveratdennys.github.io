@@ -244,13 +244,9 @@ pre {
 }
 
 .hero-copy,
-.page-copy,
 .section-heading p,
 .topic-card p,
-.post-card p,
-.post-body p,
-.post-body li,
-.post-body blockquote {
+.post-card p {
   max-width: var(--measure);
 }
 
@@ -456,7 +452,7 @@ pre {
 }
 
 .page-intro-post .page-copy {
-  max-width: 60ch;
+  max-width: none;
 }
 
 .post-layout {
@@ -618,6 +614,46 @@ pre {
   margin: 2rem 0;
   border: 0;
   border-top: 1px solid var(--border);
+}
+
+.post-body table {
+  width: 100%;
+  margin: 1.6rem 0;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.post-body thead th {
+  padding: 0.55rem 0.85rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(142, 197, 255, 0.06);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.post-body tbody td {
+  padding: 0.5rem 0.85rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.post-body tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.post-body tbody tr:hover td {
+  background: rgba(142, 197, 255, 0.045);
+  color: var(--text);
+}
+
+@media (max-width: 680px) {
+  .post-body table {
+    display: block;
+    overflow-x: auto;
+  }
 }
 
 @media (max-width: 900px) {
