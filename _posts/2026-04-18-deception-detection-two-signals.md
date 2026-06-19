@@ -1,7 +1,7 @@
 ---
 title: "Two Kinds of Deception, Two Kinds of Signal"
 published: true
-summary: "Extending Apollo Research's linear probe pipeline to Qwen 3.5-4B. The cross-domain transfer to insider trading collapses below chance, an extreme version of the scenario sensitivity the paper already flagged. A dedicated omission probe shows a different layer profile from commission, pointing toward treating the two as mechanistically distinct deception categories."
+summary: "Extending Apollo Research's linear probe pipeline to Qwen 3.5-4B. The cross domain transfer to insider trading performed below chance. A dedicated omission probe shows a different layer profile from commission, pointing toward treating the two as distinct deception categories in activation space."
 topics:
   - Interpretability
   - Omission probe
@@ -10,7 +10,7 @@ topics:
 
 My [recent progress]({{ '/writing/deception-detection-qwen/' | relative_url }}) left the Qwen 3.5-4B probe separating honest and deceptive roleplaying completions at AUROC 0.976, but only 0.642 against an Alpaca control. This shows the ability to detect roleplaying style, but not necessarily deception.
 
-Two setup changes between that post and this one are worth pointing out. First, the control. The Apollo paper probes Llama-3.3 and uses Llama-3.3's own Alpaca completions as the control (paper section 3.2.3). My first Qwen run reused the paper's shipped Llama generated Alpaca completions instead of Qwen generated completions, which made the control writing style confound of Llama style against Qwen style. Regenerating the Alpaca completions with Qwen restored on policy control, matching the paper's design on a different model. Second, I switched the probe's training data from roleplaying scenarios to the paper's RepE (Representation Engineering) paired honest/deceptive facts, which the paper shows separates deception from control more cleanly. Together those two changes lifted vs Alpaca AUROC on roleplaying from 0.642 to 0.971, and the layer optimization below takes it to 0.992.
+Two setup changes between that post and this one are worth pointing out. First, the control. The Apollo paper probes Llama-3.3 and uses Llama-3.3's own Alpaca completions as the control (paper section 3.2.3). My first Qwen run reused the paper's shipped Llama generated Alpaca completions instead of Qwen generated completions, which made the control a writing style confound, Llama style against Qwen style. Regenerating the Alpaca completions with Qwen restored on policy control, matching the paper's design on a different model. Second, I switched the probe's training data from roleplaying scenarios to the paper's RepE (Representation Engineering) paired honest/deceptive facts, which the paper shows separates deception from control more cleanly. Together those two changes lifted vs Alpaca AUROC on roleplaying from 0.642 to 0.971, and the layer optimization below takes it to 0.992.
 
 I decided to look at the following two points:
 
@@ -75,7 +75,7 @@ Before building around this, I wanted to check whether the distinction was conve
 
 [Knappe et al.'s 2025 meta-analysis](https://www.sciencedirect.com/science/article/pii/S0167876025007329) of 54 ERP studies reports P300 amplitude for concealed information tests at Cohen's d = 1.59, where omission has its own large, consistent neural signature, not a weaker version of commission. [Lisofsky et al. (2014)](https://pubmed.ncbi.nlm.nih.gov/24929201/), a quantitative meta-analysis pooling 22 fMRI studies (N=416), find that interactive/social deception recruits temporal-parietal regions, while non-interactive lying recruits dorsolateral PFC. Different contexts, different circuits.
 
-Note that I'm not claiming LLMs, and Qwen 3.5 specifically, behave the way they do because they are just like brains. The argument is narrower: deception isn't a single phenomenon in human neural data, so assuming it would be a single direction in an LLM's activation space seems to be an assumption worth testing. The category split I pulled out of the insider trading failure, commission vs omission as mechanistically distinct, is the same split that is consistently observed in human ERP literature. I thought this would be interesting to test next.
+Note that I'm not claiming LLMs, and Qwen 3.5 specifically, behave the way they do because they are just like brains. The argument is narrower: deception isn't a single phenomenon in human neural data, so assuming it would be a single direction in an LLM's activation space seems to be an assumption worth testing. The category split I pulled out of the insider trading failure, commission vs omission proposed as mechanistically distinct, is the same split that is consistently observed in human ERP literature. I thought this would be interesting to test next.
 
 ## Training a probe on the other kind
 
