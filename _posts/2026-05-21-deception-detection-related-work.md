@@ -22,7 +22,7 @@ Three papers sit closest to what I've been doing.
 
 ## Other partial overlaps
 
-**Laurito et al. — "Liars' Bench"** ([arXiv 2511.16035](https://arxiv.org/abs/2511.16035), November 2025). 72,863 on-policy lie/honest examples from Llama-3.3-70B, **Qwen-2.5-72B**, Mistral-Small-24B, and Gemma-3-27B. Reports mean probes averaging balanced accuracy 0.54, close to chance, and identifies that probes systematically fail on certain lie types. Documents the general cross-domain failure pattern I hit, though without the specific inverted-direction signature or the commission/omission split.
+**Laurito et al. — "Liars' Bench"** ([arXiv 2511.16035](https://arxiv.org/abs/2511.16035), November 2025). 72,863 on-policy lie/honest examples from Llama-3.3-70B, **Qwen-2.5-72B**, Mistral-Small-24B, and Gemma-3-27B. Reports mean probes averaging balanced accuracy 0.54, close to chance, and identifies that probes systematically fail on certain lie types. Documents the general cross domain failure pattern I hit, though without the specific inverted-direction signature or the commission/omission split.
 
 **"Caught in the Act"** ([arXiv 2508.19505](https://arxiv.org/abs/2508.19505), September 2025). Probes Llama, **Qwen (1.5B–14B)**, and DeepSeek-r1. Runs an explicit layer-wise sweep and reports a three stage pattern: near random early, peak mid, slight decline late. Qualitatively consistent with my commission-probe shape, though they don't carve by deception type.
 

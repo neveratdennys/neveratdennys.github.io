@@ -16,9 +16,9 @@ I decided to look at the following two points:
 
 (1) Find out which layers carry deception signals in Qwen 3.5-4B. The original study sweeps layers and ends up using layer 22 of 80 on Llama-70B, but since Qwen 3.5's architecture is significantly different, I wanted the full per-layer picture on this model before picking the probe depth.
 
-(2) Replicate the paper's cross-domain transfer check on Qwen, to see whether a smaller model with a different architecture behaves the same way Llama-70B did.
+(2) Replicate the paper's cross domain transfer check on Qwen, to see whether a smaller model with a different architecture behaves the same way Llama-70B did.
 
-The layer investigation produced a clean peak band at layers 10–15. Cross-domain transfer showed the same family of issues the paper already flags: the probe partly detecting "the scenario is deception-related" rather than pure "this response is deceptive", but to a more extreme degree on Qwen 3.5. On roleplaying the signal is lower than the paper's Llama-70B numbers, on insider trading it fully inverts below chance. This gave me ideas to try a multi probe approach next.
+The layer investigation produced a clean peak band at layers 10–15. Cross domain transfer showed the same family of issues the paper already flags: the probe partly detecting "the scenario is deception related" rather than pure "this response is deceptive", but to a more extreme degree on Qwen 3.5. On roleplaying the signal is lower than the paper's Llama-70B numbers, on insider trading it fully inverts below chance. This gave me ideas to try a multi probe approach next.
 
 ## Where the signal lives
 
@@ -43,9 +43,9 @@ An additional note: stacking more layers does not help. I trained three probe va
 
 - **32-layer combined** (all layers 0–31): a naive use everything baseline.
 - **7-layer even** (layers 12, 14, 16, 18, 20, 22, 24): the middle layers similar to Llama configs.
-- **5-layer data-driven** (layers 10, 11, 13, 14, 15): the top individual performers from the sweep above.
+- **5-layer data driven** (layers 10, 11, 13, 14, 15): the top individual performers from the sweep above.
 
-![Probe variant comparison on cross-domain roleplaying](/assets/images/qwen-probe-variant-comparison.png)
+![Probe variant comparison on cross domain roleplaying](/assets/images/qwen-probe-variant-comparison.png)
 
 The 5 layer probe wins on every metric: H vs D AUROC 0.791, vs Alpaca AUROC 0.993, and recall at 1% FPR of 83.2%, compared to 0.725 / 0.978 / 54.0% for the 32 layer and 0.743 / 0.981 / 50.7% for the 7 layer. (On the in domain RepE validation set all three saturate at 1.000.) This reaffirms the idea that uninformative layers dilute the deception direction rather than adding redundancy.
 
@@ -61,11 +61,11 @@ Then I ran that same probe on insider trading rollouts. This is the scenario whe
 
 It came out at **AUROC 0.458**.
 
-That is below chance, and a significant departure from what the paper reported on the same scenario. The Apollo probe (trained on their equivalent paired honest/deceptive data) reaches AUROC 0.999 on Insider Trading Report on Llama-70B, with a cross-domain AUROC range of 0.964–0.999 across their four evaluation datasets.
+That is below chance, and a significant departure from what the paper reported on the same scenario. The Apollo probe (trained on their equivalent paired honest/deceptive data) reaches AUROC 0.999 on Insider Trading Report on Llama-70B, with a cross domain AUROC range of 0.964–0.999 across their four evaluation datasets.
 
-![Cross-domain transfer comparison: paper's Llama-70B probe vs my Qwen 3.5-4B probe](/assets/images/qwen-insider-trading-comparison.png)
+![Cross domain transfer comparison: paper's Llama-70B probe vs my Qwen 3.5-4B probe](/assets/images/qwen-insider-trading-comparison.png)
 
-But the paper already flags a more subtle concern even at those high AUROCs: its probe partially depends on *"is the scenario deception-related"* rather than *"is the response actually deceptive"* (paper section 4.1.1, and Appendix A.1 shows the same effect on an independent AI Liar dataset, honest responses in deception-incentivized scenarios score higher than honest responses in neutral ones). On Llama-70B that scenario sensitivity is a small caveat layered over a strong H vs D signal. On Qwen 3.5-4B it's the *dominant* effect: within insider trading, the probe scores honest completions *higher* than deceptive ones, and the learned deception direction is effectively inverted on this dataset. The vs control AUROC stayed at 0.993, so the probe still cleanly separates insider trading text from Alpaca text, it just can't tell which direction is which inside the scenario. The scenario vs control channel still works, though the H vs D channel inside the scenario has collapsed.
+But the paper already flags a more subtle concern even at those high AUROCs: its probe partially depends on *"is the scenario deception related"* rather than *"is the response actually deceptive"* (paper section 4.1.1, and Appendix A.1 shows the same effect on an independent AI Liar dataset, honest responses in deception-incentivized scenarios score higher than honest responses in neutral ones). On Llama-70B that scenario sensitivity is a small caveat layered over a strong H vs D signal. On Qwen 3.5-4B it's the *dominant* effect: within insider trading, the probe scores honest completions *higher* than deceptive ones, and the learned deception direction is effectively inverted on this dataset. The vs control AUROC stayed at 0.993, so the probe still cleanly separates insider trading text from Alpaca text, it just can't tell which direction is which inside the scenario. The scenario vs control channel still works, though the H vs D channel inside the scenario has collapsed.
 
 Hypothesis: the RepE probe learned a particular kind of deception, stating things known to be false. Insider trading's deception isn't the same. Deceiving by *withholding* information and deceiving by *saying the wrong thing* are different operations, and they don't appear to share a direction in activation space.
 
@@ -122,4 +122,4 @@ Still, the machine blackscreened multiple times mid sweep on shards 24–27 and 
 
 ## Next
 
-The layer 24–31 gap eventually closed, and the late layer story turned out simpler than expected (covered in the [batch size post]({{ '/writing/deception-detection-batch-size-kernel-dispatch/' | relative_url }})). Beyond that, the next step is a multi probe POC: pick layers for each probe in a principled way, retrain commission and omission as final probes, and build a cross probe comparison where each probe is evaluated against its own training domain plus held out cross-domain data. The canonical numbers from the batch size post are what that POC uses. The POC is in progress and will be a separate post.
+The layer 24–31 gap eventually closed, and the late layer story turned out simpler than expected (covered in the [batch size post]({{ '/writing/deception-detection-batch-size-kernel-dispatch/' | relative_url }})). Beyond that, the next step is a multi probe POC: pick layers for each probe in a principled way, retrain commission and omission as final probes, and build a cross probe comparison where each probe is evaluated against its own training domain plus held out cross domain data. The canonical numbers from the batch size post are what that POC uses. The POC is in progress and will be a separate post.
